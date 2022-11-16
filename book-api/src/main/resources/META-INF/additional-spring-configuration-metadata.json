@@ -1,0 +1,38 @@
+{
+  "properties": [
+    {
+      "name": "minio.endpoint",
+      "type": "java.lang.String",
+      "description": "Description for minio.endpoint."
+    },
+    {
+      "name": "minio.fileHost",
+      "type": "java.lang.String",
+      "description": "Description for minio.fileHost."
+    },
+    {
+      "name": "minio.bucketName",
+      "type": "java.lang.String",
+      "description": "Description for minio.bucketName."
+    },
+    {
+      "name": "minio.accessKey",
+      "type": "java.lang.String",
+      "description": "Description for minio.accessKey."
+    },
+    {
+      "name": "minio.secretKey",
+      "type": "java.lang.String",
+      "description": "Description for minio.secretKey."
+    },
+    {
+      "name": "minio.imgSizeLimit",
+      "type": "java.lang.Integer",
+      "description": "Description for minio.imgSizeLimit."
+    },
+    {
+      "name": "minio.fileSizeLimit",
+      "type": "java.lang.Integer",
+      "description": "Description for minio.fileSizeLimit."
+    }
+  ] }

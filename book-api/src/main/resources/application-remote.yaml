@@ -1,0 +1,60 @@
+server:
+  port: 5000
+  tomcat:
+    uri-encoding: UTF-8
+    max-swallow-size: -1
+spring:
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 2MB
+  datasource:
+    type: com.zaxxer.hikari.HikariDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/imooc_red_book?useUnicode=true
+    hikari:
+      username: root
+      password: Yinmu.123
+      connection-timeout: 30000
+      minimum-idle: 5
+      maximum-pool-size: 20
+      auto-commit: true
+      pool-name: DataSourceHikariCP
+      max-lifetime: 18000000
+      connection-test-query: SELECT 1
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    database: 1
+
+minio:
+  endpoint: http://127.0.0.1:9000
+  fileHost: http://138.2.236.145:9000
+  bucketName: red-book-video
+  accessKey: admin
+  secretKey: kungtalon
+  imgSizeLimit: 1024
+  fileSizeLimit: 1024
+
+mybatis:
+  type-aliases-package: org.talon.pojo       # 所有pojo类所在的包路径
+  mapper-locations: classpath:mapper/*.xml    # mapper映射文件
+
+mapper:
+  mappers: org.talon.my.MyMapper      # 配置MyMapper，包含了一些封装好的CRUD方法
+  not-empty: false                    # 在进行数据库操作的时候，username != null 是否会追加 username != ''
+  identity: MYSQL
+
+pagehelper:
+  helper-dialect: MYSQL
+  support-methods-arguments: true
+
+twilio:
+  account-sid: ACac03c2805a8653ea213068c742ad44f4
+  auth-token: 142935e69c0f8e44ebe084a75f8000b4
+  default-sender: +16802194893
+
+mail:
+  address: dhcshig@163.com
+  auth-code: YNURWACRKVBBCTQX
+  smtp: smtp.163.com

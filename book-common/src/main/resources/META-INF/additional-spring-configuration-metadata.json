@@ -1,0 +1,33 @@
+{
+  "properties": [
+    {
+      "name": "twilio.account-sid",
+      "type": "java.lang.String",
+      "description": "Description for twilio.account-sid."
+    },
+    {
+      "name": "twilio.auth-token",
+      "type": "java.lang.String",
+      "description": "Description for twilio.auth-token."
+    },
+    {
+      "name": "twilio.default-sender",
+      "type": "java.lang.String",
+      "description": "Description for twilio.default-sender."
+    },
+    {
+      "name": "mail.address",
+      "type": "java.lang.String",
+      "description": "Description for mail.address."
+    },
+    {
+      "name": "mail.auth-code",
+      "type": "java.lang.String",
+      "description": "Description for mail.auth-code."
+    },
+    {
+      "name": "mail.smtp",
+      "type": "java.lang.String",
+      "description": "Description for mail.smtp."
+    }
+  ] }
