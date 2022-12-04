@@ -55,7 +55,7 @@ public class UserInfoController extends RedisProperties {
         String myFansCntStr = redis.get(REDIS_MY_FANS_COUNT + userId);
 
         // my liked
-        String myVlogLikedCntStr = redis.get(REDIS_MY_VLOG_BE_LIKED_COUNT + userId);
+        String myVlogLikedCntStr = redis.get(REDIS_MY_VLOGS_BE_LIKED_COUNT + userId);
         String myCommentLikedCntStr = redis.get(REDIS_MY_COMMENT_BE_LIKED_COUNT + userId);
 
         Long myFollowingCnt = 0L;

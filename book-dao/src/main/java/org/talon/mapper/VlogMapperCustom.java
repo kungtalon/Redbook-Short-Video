@@ -1,5 +1,6 @@
 package org.talon.mapper;
 
+import net.sf.jsqlparser.statement.create.table.Index;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;
 import org.talon.my.MyMapper;
@@ -15,4 +16,8 @@ public interface VlogMapperCustom {
     List<IndexVlog> getIndexVlogList(@Param("paramMap") Map<String, Object> map);
 
     List<IndexVlog> getVlogDetailById(@Param("paramMap") Map<String, Object> map);
+
+    List<IndexVlog> getMyLikedVlogList(@Param("paramMap") Map<String, Object> map);
+
+    List<IndexVlog> getMyFollowVlogList(@Param("paramMap") Map<String, Object> map);
 }

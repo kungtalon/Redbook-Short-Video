@@ -34,6 +34,8 @@ public enum ResponseStatusEnum {
     VLOG_UPDATE_ERROR(517, false, "Vlog状态更新失败！"),
     USER_FOLLOW_THEMSELVES_ERROR(518, false, "不能关注自己！"),
     USER_FOLLOW_STATS_ERROR(519, false, "关注失败，请重试！"),
+    USER_LIKE_VLOG_ERROR(520, false, "点赞失败，请重试！"),
+    VLOG_NOT_EXISTS_ERROR(521, false, "Vlog不存在！"),
 
     // 自定义系统级别异常 54x
     SYSTEM_INDEX_OUT_OF_BOUNDS(541, false, "系统错误，数组越界！"),

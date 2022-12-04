@@ -88,6 +88,11 @@ public class RedisUtils {
         return (String)redisTemplate.opsForValue().get(key);
     }
 
+    public String getOr(String key, String defaultValue) {
+        String res = redisTemplate.opsForValue().get(key);
+        return res == null ? defaultValue : res;
+    }
+
     public List<String> mget(List<String> keys) {
         return redisTemplate.opsForValue().multiGet(keys);
     }

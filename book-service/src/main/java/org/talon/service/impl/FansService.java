@@ -1,7 +1,11 @@
 package org.talon.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.util.PageObjectUtil;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.n3r.idworker.Sid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -29,6 +33,7 @@ import static org.talon.datautils.RedisConsts.*;
  * Created by Zelong
  * On 2022/11/15
  **/
+@Slf4j
 @Service
 public class FansService implements IFansService {
 
@@ -43,6 +48,8 @@ public class FansService implements IFansService {
 
     @Autowired
     private RedisUtils redis;
+
+    private final ObjectMapper jsonMapper = new ObjectMapper();
 
     @Transactional
     @Override

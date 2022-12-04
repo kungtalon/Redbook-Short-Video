@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="org.talon.mapper.VlogMapperCustom" >
-  <select id="getIndexVlogList" parameterType="map" resultType="org.talon.vo.IndexVlog">
+    <select id="getIndexVlogList" parameterType="map" resultType="org.talon.vo.IndexVlog">
     SELECT
         v.id as vlogId,
         v.vloger_id as vlogerId,
@@ -22,9 +22,28 @@
     <if test="paramMap.search != null and paramMap.search != ''">
         AND v.title like '%${paramMap.search}%'
     </if>
-    ORDER BY v.created_time
-  </select>
-  <select id="getVlogDetailById" parameterType="map" resultType="org.talon.vo.IndexVlog">
+    ORDER BY v.created_time DESC
+    </select>
+    <select id="getVlogDetailById" parameterType="map" resultType="org.talon.vo.IndexVlog">
+    SELECT
+        v.id as vlogId,
+        v.vloger_id as vlogerId,
+        u.face as vlogerFace,
+        u.nickname as blogerName,
+        v.title as content,
+        v.url as url,
+        v.cover as cover,
+        v.width as width,
+        v.height as height,
+        v.like_counts as likeCounts,
+        v.comments_counts as commentsCounts,
+        v.is_private as isPrivate
+    FROM vlog v
+    JOIN users u
+        ON v.vloger_id = u.id
+    WHERE v.id = #{paramMap.vlogId}
+    </select>
+    <select id="getMyLikedVlogList" parameterType="map" resultType="org.talon.vo.IndexVlog">
     SELECT
         v.id as vlogId,
         v.vloger_id as vlogerId,
@@ -36,7 +55,38 @@
         v.like_counts as likeCounts,
         v.comments_counts as commentsCounts,
         v.is_private as isPrivate
-    FROM vlog v
-    WHERE v.id = #{paramMap.vlogId}
-  </select>
+    FROM my_liked_vlog liked
+    JOIN vlog v
+        ON v.id = liked.vlog_id
+    WHERE liked.user_id = #{paramMap.userId}
+        AND v.is_private = 0
+    ORDER BY v.created_time DESC
+    </select>
+
+    <select id="getMyFollowVlogList" parameterType="map" resultType="org.talon.vo.IndexVlog">
+        SELECT
+            v.id as vlogId,
+            v.vloger_id as vlogerId,
+            u.face as vlogerFace,
+            u.nickname as blogerName,
+            v.title as content,
+            v.url as url,
+            v.cover as cover,
+            v.width as width,
+            v.height as height,
+            v.like_counts as likeCounts,
+            v.comments_counts as commentsCounts,
+            v.is_private as isPrivate
+        FROM fans f
+        JOIN vlog v
+          ON v.vloger_id = f.vloger_id
+        JOIN users u
+          ON f.vloger_id = u.id
+        WHERE f.fan_id = #{paramMap.myUserId}
+          AND v.is_private = 0
+    <if test="paramMap.onlyFriend != null and paramMap.onlyFriend == '1'.toString()">
+          AND f.is_fan_friend_of_mine = 1
+    </if>
+        ORDER BY v.created_time DESC
+    </select>
 </mapper>

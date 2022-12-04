@@ -49,7 +49,7 @@ public class IndexVlog {
 
     private Boolean isPlay = false;
 
-    private Boolean doIFollowVlogger = false;
+    private Boolean doIFollowVloger = false;
 
     private Boolean doILikeThisVlog = false;
 
