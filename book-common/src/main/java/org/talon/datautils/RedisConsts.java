@@ -15,9 +15,16 @@ public class RedisConsts {
     public static final String REDIS_MY_VLOGS_BE_LIKED_COUNT = "redbook:my_vlogs_be_liked_cnt:";
     public static final String REDIS_MY_COMMENT_BE_LIKED_COUNT = "redbook:my_comments_be_liked_cnt:";
     public static final String REDIS_VLOG_BE_LIKED_COUNT = "redbook:vlog_be_liked_cnt:";
+    public static final String REDIS_VLOG_COMMENT_COUNT = "redbook:vlog_comment_cnt:";
+    public static final String REDIS_COMMENT_LIKED_COUNT = "redbook:comment_liked_cnt:";
 
     public static final String REDIS_ME_FOLLOWS_VLOGER = "redbook:me_follow_vloger:";
     public static final String REDIS_USER_LIKE_VLOG = "redbook:redis_user_like_vlogs:";
+    public static final String REDIS_USER_LIKE_COMMENT = "redbook:user_like_comments:";
 
     public static final String REDIS_FANS_RELATION = "redbook:fans_relation:";
+
+
+    // cache
+    public static final String CACHE_COMMENT_ID = "redbook:cache:comment_id:";
 }

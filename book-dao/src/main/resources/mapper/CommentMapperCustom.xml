@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="org.talon.mapper.CommentMapperCustom" >
+    <select id="queryComments" parameterType="map" resultType="org.talon.index.IndexComment">
+    SELECT
+        c.id as id,
+        c.id as commentId,
+        c.vlog_id as vlogId,
+        u.id as vlogerId,
+        u.nickname as commentUserNickname,
+        u.face as commentUserFace,
+        c.father_comment_id as fatherCommentId,
+        c.comment_user_id as commentUserId,
+        c.like_counts as likeCounts,
+        c.content as content,
+        fu.nickname as replyedUserNickname,
+        c.create_time as createTime
+    FROM `comment` c
+    LEFT JOIN users u
+        ON c.comment_user_id = u.id
+    LEFT JOIN `comment` fc
+        ON c.father_comment_id = fc.id
+    LEFT JOIN users fu
+        ON fc.comment_user_id = fu.id
+    WHERE c.vlog_id = #{paramMap.vlogId}
+    ORDER BY
+         c.like_counts DESC,
+         c.create_time DESC
+    </select>
+</mapper>

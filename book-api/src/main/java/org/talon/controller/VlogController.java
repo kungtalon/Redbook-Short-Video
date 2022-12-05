@@ -11,10 +11,8 @@ import org.talon.service.IUserService;
 import org.talon.service.IVlogService;
 import org.talon.utils.RedisProperties;
 import org.talon.utils.pagination.PagedGridResult;
-import org.talon.vo.IndexVlog;
+import org.talon.index.IndexVlog;
 import org.talon.vo.VlogInfo;
-
-import java.util.List;
 
 /**
  * Created by Zelong

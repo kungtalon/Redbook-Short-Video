@@ -36,6 +36,9 @@ public enum ResponseStatusEnum {
     USER_FOLLOW_STATS_ERROR(519, false, "关注失败，请重试！"),
     USER_LIKE_VLOG_ERROR(520, false, "点赞失败，请重试！"),
     VLOG_NOT_EXISTS_ERROR(521, false, "Vlog不存在！"),
+    COMMENT_CREATE_FAILD(522, false, "无法创建评论！"),
+    COMMENT_NOT_EXISTS_ERROR(523, false, "评论不存在！"),
+    COMMENT_INFO_UPDATE_ERROR(524, false, "评论状态更新异常！请稍后重试！"),
 
     // 自定义系统级别异常 54x
     SYSTEM_INDEX_OUT_OF_BOUNDS(541, false, "系统错误，数组越界！"),

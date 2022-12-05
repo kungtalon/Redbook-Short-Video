@@ -1,5 +1,4 @@
 FROM adoptopenjdk/openjdk8
-WORKDIR /red-book-video-application
-COPY book-api/target/classes ./
+WORKDIR /app
 ADD book-api/target/book-api.jar ./
-CMD ["java", "-jar", "book-api.jar", "-Dspring.profiles.active=remote"]
+CMD ["java", "-jar", "book-api.jar", "--spring.profiles.active=remote"]

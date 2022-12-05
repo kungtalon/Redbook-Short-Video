@@ -1,7 +1,6 @@
 package org.talon.service.impl;
 
 import com.github.pagehelper.PageHelper;
-import com.tencentcloudapi.dbbrain.v20191016.models.CreateDBDiagReportTaskRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.n3r.idworker.Sid;
 import org.springframework.beans.BeanUtils;
@@ -19,7 +18,7 @@ import org.talon.pojo.Vlog;
 import org.talon.service.IVlogService;
 import org.talon.utils.pagination.MysqlPageUtils;
 import org.talon.utils.pagination.PagedGridResult;
-import org.talon.vo.IndexVlog;
+import org.talon.index.IndexVlog;
 import org.talon.vo.VlogInfo;
 import tk.mybatis.mapper.entity.Example;
 

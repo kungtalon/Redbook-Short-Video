@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="org.talon.mapper.VlogMapperCustom" >
-    <select id="getIndexVlogList" parameterType="map" resultType="org.talon.vo.IndexVlog">
+    <select id="getIndexVlogList" parameterType="map" resultType="org.talon.index.IndexVlog">
     SELECT
         v.id as vlogId,
         v.vloger_id as vlogerId,
@@ -24,7 +24,7 @@
     </if>
     ORDER BY v.created_time DESC
     </select>
-    <select id="getVlogDetailById" parameterType="map" resultType="org.talon.vo.IndexVlog">
+    <select id="getVlogDetailById" parameterType="map" resultType="org.talon.index.IndexVlog">
     SELECT
         v.id as vlogId,
         v.vloger_id as vlogerId,
@@ -43,7 +43,7 @@
         ON v.vloger_id = u.id
     WHERE v.id = #{paramMap.vlogId}
     </select>
-    <select id="getMyLikedVlogList" parameterType="map" resultType="org.talon.vo.IndexVlog">
+    <select id="getMyLikedVlogList" parameterType="map" resultType="org.talon.index.IndexVlog">
     SELECT
         v.id as vlogId,
         v.vloger_id as vlogerId,
@@ -63,7 +63,7 @@
     ORDER BY v.created_time DESC
     </select>
 
-    <select id="getMyFollowVlogList" parameterType="map" resultType="org.talon.vo.IndexVlog">
+    <select id="getMyFollowVlogList" parameterType="map" resultType="org.talon.index.IndexVlog">
         SELECT
             v.id as vlogId,
             v.vloger_id as vlogerId,

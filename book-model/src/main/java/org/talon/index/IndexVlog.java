@@ -1,4 +1,4 @@
-package org.talon.vo;
+package org.talon.index;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
