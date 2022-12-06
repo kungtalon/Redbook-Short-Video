@@ -23,6 +23,8 @@ public interface IVlogService {
 
     boolean changeVisibility(String userId, String vlogId, Integer isPrivate);
 
+    Vlog getVlogById(String id);
+
     /* get the vlogs of current user */
     PagedGridResult queryMyVlogList(String userId,
                                     Integer page,

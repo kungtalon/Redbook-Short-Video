@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.util.LRUMap;
 import com.github.pagehelper.PageHelper;
 import com.mysql.cj.util.LRUCache;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.n3r.idworker.Sid;
 import org.springframework.beans.BeanUtils;
@@ -13,15 +14,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.ConcurrentLruCache;
 import org.talon.datautils.RedisConsts;
 import org.talon.datautils.RedisUtils;
+import org.talon.enums.MessageEnum;
 import org.talon.enums.YesOrNo;
 import org.talon.exception.RedbookException;
 import org.talon.index.IndexComment;
 import org.talon.index.IndexVlog;
 import org.talon.mapper.CommentMapper;
 import org.talon.mapper.CommentMapperCustom;
+import org.talon.mapper.VlogMapper;
+import org.talon.mapper.VlogMapperCustom;
 import org.talon.pojo.Comment;
+import org.talon.pojo.Vlog;
 import org.talon.rest.ResponseStatusEnum;
 import org.talon.service.ICommentService;
+import org.talon.service.IMsgService;
+import org.talon.service.IVlogService;
 import org.talon.utils.pagination.MysqlPageUtils;
 import org.talon.utils.pagination.PagedGridResult;
 import org.talon.vo.CommentInfo;
@@ -31,14 +38,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.talon.datautils.RedisConsts.REDIS_ME_FOLLOWS_VLOGER;
-import static org.talon.datautils.RedisConsts.REDIS_USER_LIKE_COMMENT;
+import static org.talon.datautils.RedisConsts.*;
 
 /**
  * Created by Zelong
  * On 2022/12/3
  **/
 
+@Slf4j
 @Service
 public class CommentService implements ICommentService {
 
@@ -47,6 +54,15 @@ public class CommentService implements ICommentService {
 
     @Autowired
     private CommentMapperCustom commentMapperCustom;
+
+    @Autowired
+    private VlogMapperCustom vlogMapperCustom;
+
+    @Autowired
+    private IVlogService vlogService;
+
+    @Autowired
+    private IMsgService msgService;
 
     @Autowired
     private Sid sid;
@@ -79,15 +95,40 @@ public class CommentService implements ICommentService {
 
         CommentInfo newCommentInfo = new CommentInfo();
         BeanUtils.copyProperties(comment, newCommentInfo);
+
+        // system message : comment / reply
+        Map<String, Object> msgContent = new HashMap<>();
+        msgContent.put("commentId", commentId);
+        msgContent.put("commentContent", comment.getContent());
+
+        Vlog vlog = vlogService.getVlogById(comment.getVlogId());
+        msgContent.put("vlogId", vlog.getId());
+        msgContent.put("vlogCover", vlog.getCover());
+
+        Integer type = MessageEnum.COMMENT_VLOG.type;
+        if (StringUtils.isNotBlank(comment.getFatherCommentId())
+            && !"0".equalsIgnoreCase(comment.getFatherCommentId())) {
+            type = MessageEnum.REPLY_YOU.type;
+        }
+
+        msgService.createMsg(comment.getCommentUserId(),
+                comment.getVlogerId(),
+                type,
+                msgContent);
+
         return newCommentInfo;
     }
 
     @Override
     public Comment getCommentById(String commentId) {
         if (cache.containsKey(commentId)) {
-            Comment comment = jsonMapper.convertValue(
-                    cache.get(commentId), Comment.class);
-            return comment;
+            try {
+                Comment comment = jsonMapper.readValue(
+                        cache.get(commentId), Comment.class);
+                return comment;
+            } catch (JsonProcessingException ex) {
+                log.error("Failed to convert Comment from json to object!");
+            }
         }
 
         Comment result = commentMapper.selectByPrimaryKey(commentId);
@@ -99,6 +140,32 @@ public class CommentService implements ICommentService {
             }
         }
         return result;
+    }
+
+    @Override
+    public void like(String commentId, String userId) {
+        redis.increment(REDIS_COMMENT_LIKED_COUNT + commentId, 1);
+        redis.setHashValue(REDIS_USER_LIKE_COMMENT + commentId, userId, "1");
+
+        // system message: like comment
+        Comment comment = getCommentById(commentId);
+        Vlog vlog = vlogService.getVlogById(comment.getVlogId());
+
+        Map<String, Object> msgContent = new HashMap();
+        msgContent.put("vlogId", vlog.getId());
+        msgContent.put("vlogCover", vlog.getCover());
+        msgContent.put("commentId", commentId);
+
+        msgService.createMsg(userId,
+                comment.getCommentUserId(),
+                MessageEnum.LIKE_COMMENT.type,
+                msgContent);
+    }
+
+    @Override
+    public void unlinke(String commentId, String userId) {
+        redis.decrement(REDIS_COMMENT_LIKED_COUNT + commentId, 1);
+        redis.hdel(REDIS_USER_LIKE_COMMENT + commentId, userId);
     }
 
     @Override
@@ -138,7 +205,7 @@ public class CommentService implements ICommentService {
                                 String vlogId) {
         String commentId = comment.getCommentId();
         String countsStr = redis.getOr(
-            RedisConsts.REDIS_COMMENT_LIKED_COUNT + commentId, "0");
+            REDIS_COMMENT_LIKED_COUNT + commentId, "0");
         comment.setLikeCounts(Integer.valueOf(countsStr));
 
         // check whether the user liked the comment

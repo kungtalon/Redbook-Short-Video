@@ -12,4 +12,5 @@ import java.util.Map;
 public interface CommentMapperCustom {
 
     List<IndexComment> queryComments(@Param("paramMap") Map<String, Object> map);
+
 }

@@ -11,12 +11,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.talon.datautils.RedisUtils;
+import org.talon.enums.MessageEnum;
 import org.talon.enums.YesOrNo;
 import org.talon.mapper.FansMapper;
 import org.talon.mapper.FansMapperCustom;
 import org.talon.pojo.Fans;
 import org.talon.pojo.Vlog;
 import org.talon.service.IFansService;
+import org.talon.service.IMsgService;
 import org.talon.utils.pagination.MysqlPageUtils;
 import org.talon.utils.pagination.PagedGridResult;
 import org.talon.vo.FansInfo;
@@ -42,6 +44,9 @@ public class FansService implements IFansService {
 
     @Autowired
     private FansMapperCustom fansMapperCustom;
+
+    @Autowired
+    private IMsgService msgService;
 
     @Autowired
     private Sid sid;
@@ -77,6 +82,9 @@ public class FansService implements IFansService {
         redis.increment(REDIS_MY_FANS_COUNT + followUserId, 1);
 
         fansMapper.insert(fans);
+
+        // system message: follow
+        msgService.createMsg(myUserId, followUserId, MessageEnum.FOLLOW_YOU.type, null);
         return true;
     }
 

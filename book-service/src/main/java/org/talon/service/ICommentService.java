@@ -16,6 +16,10 @@ public interface ICommentService {
 
     Comment getCommentById(String commentId);
 
+    void like(String commentId, String userId);
+
+    void unlinke(String commentId, String userId);
+
     PagedGridResult queryVlogComments(String vlogId,
                                       String userId,
                                       Integer page,

@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 import org.talon.userverification.EmailSender;
 import org.talon.userverification.TwilioSMSSender;
 import tk.mybatis.spring.annotation.MapperScan;
@@ -21,6 +22,7 @@ import javax.validation.constraints.Email;
 @SpringBootApplication
 @MapperScan(basePackages = "org.talon.mapper")
 @ComponentScan(basePackages = {"org.talon", "org.n3r.idworker"})
+@EnableMongoRepositories
 public class Application extends SpringBootServletInitializer {
     public static void main(String[] args) {
         SpringApplication.run(Application.class, args);

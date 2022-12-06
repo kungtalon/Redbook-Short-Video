@@ -85,16 +85,14 @@ public class CommentController extends RedisProperties {
     @PostMapping("like")
     public JsonResponse like(@RequestParam String commentId,
                              @RequestParam String userId) {
-        redis.increment(REDIS_COMMENT_LIKED_COUNT + commentId, 1);
-        redis.setHashValue(REDIS_USER_LIKE_COMMENT + commentId, userId, "1");
+        commentService.like(commentId, userId);
         return JsonResponse.ok();
     }
 
     @PostMapping("unlike")
     public JsonResponse unlike(@RequestParam String commentId,
                                @RequestParam String userId) {
-        redis.decrement(REDIS_COMMENT_LIKED_COUNT + commentId, 1);
-        redis.hdel(REDIS_USER_LIKE_COMMENT + commentId, userId);
+        commentService.unlinke(commentId, userId);
         return JsonResponse.ok();
     }
 }

@@ -26,6 +26,10 @@ spring:
     host: 127.0.0.1
     port: 6379
     database: 1
+  data:
+    mongodb:
+      uri: mongodb://root:root@localhost:27017
+      database: imooc_red_book
 
 minio:
   endpoint: http://127.0.0.1:9000
