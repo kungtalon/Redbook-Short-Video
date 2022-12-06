@@ -12,4 +12,9 @@ public interface IMessageRepository extends MongoRepository<Message, String> {
 
     List<Message> findAllByToUserIdOrderByCreateTimeDesc(String toUserId,
                                                          Pageable pageable);
+
+    void deleteAllByFromUserIdAndToUserIdAndMsgType(String fromUserId,
+                                                    String toUserId,
+                                                    Integer msgType);
+
 }

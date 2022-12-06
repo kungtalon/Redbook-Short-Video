@@ -1,27 +1,22 @@
 package org.talon.service.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.util.LRUMap;
 import com.github.pagehelper.PageHelper;
-import com.mysql.cj.util.LRUCache;
+import com.google.common.cache.Cache;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.n3r.idworker.Sid;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.util.ConcurrentLruCache;
+import org.talon.cache.CacheManager;
 import org.talon.datautils.RedisConsts;
 import org.talon.datautils.RedisUtils;
 import org.talon.enums.MessageEnum;
 import org.talon.enums.YesOrNo;
 import org.talon.exception.RedbookException;
 import org.talon.index.IndexComment;
-import org.talon.index.IndexVlog;
 import org.talon.mapper.CommentMapper;
 import org.talon.mapper.CommentMapperCustom;
-import org.talon.mapper.VlogMapper;
 import org.talon.mapper.VlogMapperCustom;
 import org.talon.pojo.Comment;
 import org.talon.pojo.Vlog;
@@ -32,11 +27,11 @@ import org.talon.service.IVlogService;
 import org.talon.utils.pagination.MysqlPageUtils;
 import org.talon.utils.pagination.PagedGridResult;
 import org.talon.vo.CommentInfo;
+import tk.mybatis.mapper.entity.Example;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.talon.datautils.RedisConsts.*;
 
@@ -70,9 +65,8 @@ public class CommentService implements ICommentService {
     @Autowired
     private RedisUtils redis;
 
-    private final LRUCache<String, String> cache = new LRUCache<>(100);
-
-    private final ObjectMapper jsonMapper = new ObjectMapper();
+    private final Cache<String, Object> cache =
+            CacheManager.ofTable(CacheManager.TableNames.COMMENT_CACHE);
 
     @Override
     public CommentInfo createComment(CommentInfo commentInfo) {
@@ -109,6 +103,7 @@ public class CommentService implements ICommentService {
         if (StringUtils.isNotBlank(comment.getFatherCommentId())
             && !"0".equalsIgnoreCase(comment.getFatherCommentId())) {
             type = MessageEnum.REPLY_YOU.type;
+            msgContent.put("fatherCommentId", comment.getFatherCommentId());
         }
 
         msgService.createMsg(comment.getCommentUserId(),
@@ -121,25 +116,17 @@ public class CommentService implements ICommentService {
 
     @Override
     public Comment getCommentById(String commentId) {
-        if (cache.containsKey(commentId)) {
-            try {
-                Comment comment = jsonMapper.readValue(
-                        cache.get(commentId), Comment.class);
-                return comment;
-            } catch (JsonProcessingException ex) {
-                log.error("Failed to convert Comment from json to object!");
-            }
+        try {
+            return (Comment) cache.get(commentId, () -> {
+                Comment result = getCommentById(commentId);
+                cache.put(commentId, result);
+                return result;
+            });
+        } catch (ExecutionException ex) {
+            log.error("Error when loading value from comment cache");
         }
 
-        Comment result = commentMapper.selectByPrimaryKey(commentId);
-        if (result != null) {
-            try {
-                cache.put(commentId, jsonMapper.writeValueAsString(result));
-            } catch (JsonProcessingException ex) {
-                // ignore
-            }
-        }
-        return result;
+        return null;
     }
 
     @Override
@@ -166,6 +153,11 @@ public class CommentService implements ICommentService {
     public void unlinke(String commentId, String userId) {
         redis.decrement(REDIS_COMMENT_LIKED_COUNT + commentId, 1);
         redis.hdel(REDIS_USER_LIKE_COMMENT + commentId, userId);
+
+        msgService.deleteAllMessages(userId,
+                "",
+                MessageEnum.LIKE_COMMENT.type,
+                Collections.singletonMap("commentId", commentId));
     }
 
     @Override
@@ -195,7 +187,19 @@ public class CommentService implements ICommentService {
 
         commentMapper.delete(toDelComment);
 
+        // also, delete all replies associated with this comment
+        Example example = new Example(Comment.class);
+        Example.Criteria criteria = example.createCriteria();
+        criteria.andEqualTo("fatherCommentId", commentId);
+        commentMapper.deleteByExample(example);
+
         redis.decrement(RedisConsts.REDIS_VLOG_COMMENT_COUNT + vlogId, 1);
+
+        if (cache.getIfPresent(commentId) != null) {
+            cache.invalidate(commentId);
+        }
+
+        msgService.deleteAllMessagesByCommentId(commentId);
     }
 
 

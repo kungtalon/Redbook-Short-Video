@@ -14,5 +14,14 @@ public interface IMsgService {
                    Integer msgType,
                    Map msgContent);
 
-    List<Message> queryComments(String toUserId, Integer page, Integer pageSize);
+    List<Message> queryMessages(String toUserId, Integer page, Integer pageSize);
+
+    void deleteAllMessages(String fromUserId,
+                String toUserId,
+                Integer msgType,
+                Map msgContent);
+
+    void deleteAllMessagesByVlogId(String vlogId);
+
+    void deleteAllMessagesByCommentId(String commentId);
 }

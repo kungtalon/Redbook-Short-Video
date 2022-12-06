@@ -3,6 +3,7 @@ package org.talon.service.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.pagehelper.PageHelper;
+import com.google.common.cache.Cache;
 import com.mysql.cj.util.LRUCache;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.talon.cache.CacheManager;
 import org.talon.datautils.RedisConsts;
 import org.talon.datautils.RedisUtils;
 import org.talon.enums.MessageEnum;
@@ -19,6 +21,7 @@ import org.talon.enums.YesOrNo;
 import org.talon.mapper.MyLikedVlogMapper;
 import org.talon.mapper.VlogMapper;
 import org.talon.mapper.VlogMapperCustom;
+import org.talon.pojo.Comment;
 import org.talon.pojo.MyLikedVlog;
 import org.talon.pojo.Vlog;
 import org.talon.service.IFansService;
@@ -30,10 +33,8 @@ import org.talon.index.IndexVlog;
 import org.talon.vo.VlogInfo;
 import tk.mybatis.mapper.entity.Example;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ExecutionException;
 
 import static org.talon.datautils.RedisConsts.REDIS_ME_FOLLOWS_VLOGER;
 
@@ -66,9 +67,7 @@ public class VlogService implements IVlogService {
     @Autowired
     private Sid sid;
 
-    private final LRUCache<String, String> cache = new LRUCache<>(100);
-
-    private final ObjectMapper jsonMapper = new ObjectMapper();
+    private final Cache<String, Object> cache = CacheManager.ofTable(CacheManager.TableNames.VLOG_CACHE);
 
     @Override
     public void createVlog(VlogInfo vi) {
@@ -197,25 +196,17 @@ public class VlogService implements IVlogService {
 
     @Override
     public Vlog getVlogById(String id) {
-        if (cache.containsKey(id)) {
-            try {
-                Vlog vlog = jsonMapper.readValue(
-                        cache.get(id), Vlog.class);
-                return vlog;
-            } catch (JsonProcessingException ex) {
-                log.error("Failed to convert Vlog from json to object!");
-            }
+        try {
+            return (Vlog) cache.get(id, () -> {
+                Vlog result = getVlogById(id);
+                cache.put(id, result);
+                return result;
+            });
+        } catch (ExecutionException ex) {
+            log.error("Error when loading value from vlog cache");
         }
 
-        Vlog result = vlogMapper.selectByPrimaryKey(id);
-        if (result != null) {
-            try {
-                cache.put(id, jsonMapper.writeValueAsString(result));
-            } catch (JsonProcessingException ex) {
-                // ignore
-            }
-        }
-        return result;
+        return null;
     }
 
     @Transactional
@@ -235,6 +226,13 @@ public class VlogService implements IVlogService {
         redis.decrement(RedisConsts.REDIS_VLOG_BE_LIKED_COUNT + vlogId, 1);
 
         redis.del(RedisConsts.REDIS_USER_LIKE_VLOG + userId + ":" + vlogId);
+
+        msgService.deleteAllMessages(
+                userId,
+                vloggerId,
+                MessageEnum.LIKE_VLOG.type,
+                Collections.singletonMap("vlogId", vlogId)
+        );
 
         return success;
     }

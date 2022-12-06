@@ -110,6 +110,8 @@ public class FansService implements IFansService {
         redis.decrement(REDIS_MY_FOLLOWING_COUNT + myUserId, 1);
         redis.decrement(REDIS_MY_FANS_COUNT + followUserId, 1);
         redis.del(REDIS_ME_FOLLOWS_VLOGER + myUserId + ":" + followUserId);
+
+        msgService.deleteAllMessages(myUserId, followUserId, MessageEnum.FOLLOW_YOU.type, null);
         return true;
     }
 

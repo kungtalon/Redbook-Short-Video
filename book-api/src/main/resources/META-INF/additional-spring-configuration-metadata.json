@@ -34,5 +34,10 @@
       "name": "minio.fileSizeLimit",
       "type": "java.lang.Integer",
       "description": "Description for minio.fileSizeLimit."
+    },
+    {
+      "name": "spring.data.mongodb.showquery",
+      "type": "java.lang.Boolean",
+      "description": "Description for spring.data.mongodb.showquery."
     }
   ] }

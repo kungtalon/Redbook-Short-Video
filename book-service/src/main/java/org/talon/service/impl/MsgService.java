@@ -1,11 +1,14 @@
 package org.talon.service.impl;
 
 import io.netty.util.internal.StringUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.BasicQuery;
 import org.springframework.stereotype.Service;
 import org.talon.datautils.RedisConsts;
 import org.talon.datautils.RedisUtils;
@@ -28,6 +31,7 @@ import java.util.Map;
  * On 2022/12/4
  **/
 
+@Slf4j
 @Service
 public class MsgService implements IMsgService {
 
@@ -36,6 +40,9 @@ public class MsgService implements IMsgService {
 
     @Autowired
     private IUserService userService;
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
 
     @Autowired
     private RedisUtils redis;
@@ -70,7 +77,7 @@ public class MsgService implements IMsgService {
     }
 
     @Override
-    public List<Message> queryComments(String toUserId, Integer page, Integer pageSize) {
+    public List<Message> queryMessages(String toUserId, Integer page, Integer pageSize) {
         Pageable pageable = PageRequest.of(page,
                 pageSize,
                 Sort.Direction.DESC,
@@ -101,5 +108,59 @@ public class MsgService implements IMsgService {
         return results;
     }
 
+    @Override
+    public void deleteAllMessages(String fromUserId,
+                       String toUserId,
+                       Integer msgType,
+                       Map msgContent) {
+        if (msgType == MessageEnum.FOLLOW_YOU.type) {
+            messageRepository.deleteAllByFromUserIdAndToUserIdAndMsgType(
+                    fromUserId, toUserId, msgType
+            );
+        } else if (msgType == MessageEnum.LIKE_VLOG.type ) {
+            // in msgContent it should contain the vlogid
+            String vlogId = (String) msgContent.get("vlogId");
+            deleteDocumentByQuery("{" +
+                    "'fromUserId': '%s', " +
+                    "'msgType': %s, " +
+                    "'msgContent.vlogId': '%s'" +
+                    "}", fromUserId, msgType, vlogId);
+        } else if (msgType == MessageEnum.COMMENT_VLOG.type
+                || msgType == MessageEnum.REPLY_YOU.type
+                || msgType == MessageEnum.LIKE_COMMENT.type) {
+            String commentId = (String) msgContent.get("commentId");
+            deleteDocumentByQuery("{" +
+                    "'fromUserId': '%s', " +
+                    "'msgType': %s, " +
+                    "'msgContent.commentId': '%s'" +
+                    "}", fromUserId, msgType, commentId);
+        } else {
+            log.error("Invalid message type when deleting messages!");
+        }
+
+    }
+
+    @Override
+    public void deleteAllMessagesByVlogId(String vlogId) {
+        deleteDocumentByQuery("{'msgContent.vlogId': '%s'}", vlogId);
+    }
+
+    @Override
+    public void deleteAllMessagesByCommentId(String commentId) {
+//        // delete the comments and all replies
+//        deleteDocumentByQuery("{$or: " +
+//                "[" +
+//                "   {'msgContent.commentId': '%s'}, " +
+//                "   {'msgContent.fatherCommentId': '%s'}" +
+//                "]}", commentId, commentId);
+        deleteDocumentByQuery("{'msgContent.commentId': '%s'}", commentId);
+    }
+
+    private void deleteDocumentByQuery(String jsonQuery, Object... args) {
+        String queryStr = String.format(jsonQuery, args);
+        log.info("Mongo query: \n" + queryStr);
+        BasicQuery query = new BasicQuery(queryStr);
+        mongoTemplate.remove(query, Message.class);
+    }
 
 }
