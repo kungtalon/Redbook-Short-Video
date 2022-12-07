@@ -5,7 +5,9 @@ import com.google.common.cache.CacheBuilder;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by Zelong
@@ -15,7 +17,7 @@ import java.util.Map;
 public class CacheManager {
 
     private static int maxSize = 100;
-    private static Map<TableNames, Cache<String, Object>> allTables;
+    private static Map<TableNames, Cache<String, Object>> allTables = new HashMap<>();
 
     public enum TableNames {
         VLOG_CACHE,
@@ -28,6 +30,7 @@ public class CacheManager {
         Cache<String, Object> cache = CacheBuilder
                 .newBuilder()
                 .maximumSize(maxSize)
+                .expireAfterWrite(10 * 60, TimeUnit.SECONDS)
                 .build();
         allTables.put(name, cache);
     }

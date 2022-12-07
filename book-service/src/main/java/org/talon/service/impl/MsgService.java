@@ -42,9 +42,6 @@ public class MsgService implements IMsgService {
     private IUserService userService;
 
     @Autowired
-    private MongoTemplate mongoTemplate;
-
-    @Autowired
     private RedisUtils redis;
 
     @Override
@@ -120,20 +117,16 @@ public class MsgService implements IMsgService {
         } else if (msgType == MessageEnum.LIKE_VLOG.type ) {
             // in msgContent it should contain the vlogid
             String vlogId = (String) msgContent.get("vlogId");
-            deleteDocumentByQuery("{" +
-                    "'fromUserId': '%s', " +
-                    "'msgType': %s, " +
-                    "'msgContent.vlogId': '%s'" +
-                    "}", fromUserId, msgType, vlogId);
+            messageRepository.deleteAllByFromUserIdAndMsgTypeAndVlogId(
+                    fromUserId, msgType, vlogId
+            );
         } else if (msgType == MessageEnum.COMMENT_VLOG.type
                 || msgType == MessageEnum.REPLY_YOU.type
                 || msgType == MessageEnum.LIKE_COMMENT.type) {
             String commentId = (String) msgContent.get("commentId");
-            deleteDocumentByQuery("{" +
-                    "'fromUserId': '%s', " +
-                    "'msgType': %s, " +
-                    "'msgContent.commentId': '%s'" +
-                    "}", fromUserId, msgType, commentId);
+            messageRepository.deleteAllByFromUserIdAndMsgTypeAndCommentId(
+                    fromUserId, msgType, commentId
+            );
         } else {
             log.error("Invalid message type when deleting messages!");
         }
@@ -142,25 +135,12 @@ public class MsgService implements IMsgService {
 
     @Override
     public void deleteAllMessagesByVlogId(String vlogId) {
-        deleteDocumentByQuery("{'msgContent.vlogId': '%s'}", vlogId);
+        messageRepository.deleteAllByVlogId(vlogId);
     }
 
     @Override
     public void deleteAllMessagesByCommentId(String commentId) {
-//        // delete the comments and all replies
-//        deleteDocumentByQuery("{$or: " +
-//                "[" +
-//                "   {'msgContent.commentId': '%s'}, " +
-//                "   {'msgContent.fatherCommentId': '%s'}" +
-//                "]}", commentId, commentId);
-        deleteDocumentByQuery("{'msgContent.commentId': '%s'}", commentId);
-    }
-
-    private void deleteDocumentByQuery(String jsonQuery, Object... args) {
-        String queryStr = String.format(jsonQuery, args);
-        log.info("Mongo query: \n" + queryStr);
-        BasicQuery query = new BasicQuery(queryStr);
-        mongoTemplate.remove(query, Message.class);
+        messageRepository.deleteAllByCommentId(commentId);
     }
 
 }

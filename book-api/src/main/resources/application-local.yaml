@@ -30,7 +30,6 @@ spring:
     mongodb:
       uri: mongodb://localhost:27017
       database: imooc_red_book
-      showquery: true
 
 minio:
   endpoint: http://localhost:9000

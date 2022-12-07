@@ -203,7 +203,6 @@ public class CommentService implements ICommentService {
     }
 
 
-
     private void setCommentInfo(IndexComment comment,
                                 String myUserId,
                                 String vlogId) {
