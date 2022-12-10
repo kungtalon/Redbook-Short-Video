@@ -46,6 +46,10 @@ public class MsgService implements IMsgService {
 
     @Override
     public void createMsg(String fromUserId, String toUserId, Integer msgType, Map msgContent) {
+        if (fromUserId != null && fromUserId.equalsIgnoreCase(toUserId)) {
+            return ;
+        }
+
         Message msg = new Message();
 
         Users fromUser = userService.userExistsById(fromUserId);

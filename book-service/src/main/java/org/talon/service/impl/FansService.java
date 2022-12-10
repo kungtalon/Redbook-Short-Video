@@ -4,12 +4,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.util.PageObjectUtil;
+import com.google.common.cache.Cache;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.n3r.idworker.Sid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.talon.cache.CacheManager;
 import org.talon.datautils.RedisUtils;
 import org.talon.enums.MessageEnum;
 import org.talon.enums.YesOrNo;
@@ -28,6 +30,7 @@ import tk.mybatis.mapper.entity.Example;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import static org.talon.datautils.RedisConsts.*;
 
@@ -54,7 +57,7 @@ public class FansService implements IFansService {
     @Autowired
     private RedisUtils redis;
 
-    private final ObjectMapper jsonMapper = new ObjectMapper();
+    private final Cache<String, Object> cache = CacheManager.ofTable(CacheManager.TableNames.FANS_CACHE);
 
     @Transactional
     @Override
@@ -106,6 +109,7 @@ public class FansService implements IFansService {
         }
 
         // delete from database and redis
+        cache.invalidate(myUserId + ":" + followUserId);
         fansMapper.delete(meFollowVloger);
         redis.decrement(REDIS_MY_FOLLOWING_COUNT + myUserId, 1);
         redis.decrement(REDIS_MY_FANS_COUNT + followUserId, 1);
@@ -116,16 +120,26 @@ public class FansService implements IFansService {
     }
 
     public Fans queryFansRelation(String fansId, String vlogerId) {
-        Example example = new Example(Fans.class);
-        Example.Criteria criteria = example.createCriteria();
-        criteria.andEqualTo("vlogerId", vlogerId);
-        criteria.andEqualTo("fanId",  fansId);
+        try {
+            String key = fansId + ":" + vlogerId;
+            return (Fans) cache.get(key, () -> {
+                Example example = new Example(Fans.class);
+                Example.Criteria criteria = example.createCriteria();
+                criteria.andEqualTo("vlogerId", vlogerId);
+                criteria.andEqualTo("fanId",  fansId);
 
-        List<Fans> resultList = fansMapper.selectByExample(example);
+                List<Fans> resultList = fansMapper.selectByExample(example);
 
-        if (resultList != null && !resultList.isEmpty()) {
-            return resultList.get(0);
+                if (resultList != null && !resultList.isEmpty()) {
+                    cache.put(key, resultList.get(0));
+                    return resultList.get(0);
+                }
+                return null;
+            });
+        } catch (ExecutionException ex) {
+            log.error("Error when loading value from fans cache");
         }
+
         return null;
     }
 

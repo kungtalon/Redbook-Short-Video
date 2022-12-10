@@ -118,7 +118,7 @@ public class CommentService implements ICommentService {
     public Comment getCommentById(String commentId) {
         try {
             return (Comment) cache.get(commentId, () -> {
-                Comment result = getCommentById(commentId);
+                Comment result = commentMapper.selectByPrimaryKey(commentId);
                 cache.put(commentId, result);
                 return result;
             });
@@ -185,19 +185,16 @@ public class CommentService implements ICommentService {
         toDelComment.setCommentUserId(commentUserId);
         toDelComment.setId(commentId);
 
+        cache.invalidate(commentId);
         commentMapper.delete(toDelComment);
-
         // also, delete all replies associated with this comment
-        Example example = new Example(Comment.class);
-        Example.Criteria criteria = example.createCriteria();
-        criteria.andEqualTo("fatherCommentId", commentId);
-        commentMapper.deleteByExample(example);
+        // never mind...
+//        Example example = new Example(Comment.class);
+//        Example.Criteria criteria = example.createCriteria();
+//        criteria.andEqualTo("fatherCommentId", commentId);
+//        commentMapper.deleteByExample(example);
 
         redis.decrement(RedisConsts.REDIS_VLOG_COMMENT_COUNT + vlogId, 1);
-
-        if (cache.getIfPresent(commentId) != null) {
-            cache.invalidate(commentId);
-        }
 
         msgService.deleteAllMessagesByCommentId(commentId);
     }

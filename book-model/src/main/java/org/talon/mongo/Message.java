@@ -45,7 +45,7 @@ public class Message {
     private Integer msgType;
 
     @Field("msgContent")
-    private Map msgContent;
+    private Map<String, Object> msgContent;
 
     @Field("createTime")
     private Date createTime;

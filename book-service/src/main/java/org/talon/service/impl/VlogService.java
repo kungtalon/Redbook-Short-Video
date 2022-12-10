@@ -183,7 +183,7 @@ public class VlogService implements IVlogService {
 
         // system message: like vlog
         Vlog vlog = getVlogById(vlogId);
-        Map<String, Object> msgContent = new HashMap();
+        Map<String, Object> msgContent = new HashMap<>();
         msgContent.put("vlogId", vlogId);
         msgContent.put("vlogCover", vlog.getCover());
         msgService.createMsg(userId,
@@ -198,7 +198,7 @@ public class VlogService implements IVlogService {
     public Vlog getVlogById(String id) {
         try {
             return (Vlog) cache.get(id, () -> {
-                Vlog result = getVlogById(id);
+                Vlog result = vlogMapper.selectByPrimaryKey(id);
                 cache.put(id, result);
                 return result;
             });

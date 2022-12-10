@@ -39,6 +39,7 @@ public enum ResponseStatusEnum {
     COMMENT_CREATE_FAILD(522, false, "无法创建评论！"),
     COMMENT_NOT_EXISTS_ERROR(523, false, "评论不存在！"),
     COMMENT_INFO_UPDATE_ERROR(524, false, "评论状态更新异常！请稍后重试！"),
+    SAME_USER_ERROR(525, false, "不能对用户自身进行此操作！"),
 
     // 自定义系统级别异常 54x
     SYSTEM_INDEX_OUT_OF_BOUNDS(541, false, "系统错误，数组越界！"),
