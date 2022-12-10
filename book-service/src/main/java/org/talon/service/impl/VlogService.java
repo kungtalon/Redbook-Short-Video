@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.pagehelper.PageHelper;
 import com.google.common.cache.Cache;
+import com.google.common.util.concurrent.UncheckedExecutionException;
 import com.mysql.cj.util.LRUCache;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -16,14 +17,20 @@ import org.springframework.transaction.annotation.Transactional;
 import org.talon.cache.CacheManager;
 import org.talon.datautils.RedisConsts;
 import org.talon.datautils.RedisUtils;
+import org.talon.enums.CrudOperationEnum;
 import org.talon.enums.MessageEnum;
 import org.talon.enums.YesOrNo;
+import org.talon.exception.CacheMissException;
+import org.talon.exception.RedbookException;
 import org.talon.mapper.MyLikedVlogMapper;
 import org.talon.mapper.VlogMapper;
 import org.talon.mapper.VlogMapperCustom;
+import org.talon.mongo.Message;
 import org.talon.pojo.Comment;
 import org.talon.pojo.MyLikedVlog;
 import org.talon.pojo.Vlog;
+import org.talon.rabbitmq.RabbitQueueProducer;
+import org.talon.rest.ResponseStatusEnum;
 import org.talon.service.IFansService;
 import org.talon.service.IMsgService;
 import org.talon.service.IVlogService;
@@ -56,10 +63,7 @@ public class VlogService implements IVlogService {
     private MyLikedVlogMapper likedVlogMapper;
 
     @Autowired
-    private IFansService fansService;
-
-    @Autowired
-    private IMsgService msgService;
+    private RabbitQueueProducer ampqProducer;
 
     @Autowired
     private RedisUtils redis;
@@ -186,10 +190,12 @@ public class VlogService implements IVlogService {
         Map<String, Object> msgContent = new HashMap<>();
         msgContent.put("vlogId", vlogId);
         msgContent.put("vlogCover", vlog.getCover());
-        msgService.createMsg(userId,
-                vloggerId,
-                MessageEnum.LIKE_VLOG.type,
-                msgContent);
+//        msgService.createMsg(userId,
+//                vloggerId,
+//                MessageEnum.LIKE_VLOG.type,
+//                msgContent);
+        Message tmpMsg = new Message(userId, vloggerId, MessageEnum.LIKE_VLOG.type, msgContent);
+        ampqProducer.publishMongoMessage(tmpMsg, CrudOperationEnum.CREATE);
 
         return success;
     }
@@ -199,11 +205,20 @@ public class VlogService implements IVlogService {
         try {
             return (Vlog) cache.get(id, () -> {
                 Vlog result = vlogMapper.selectByPrimaryKey(id);
+                if (result == null) {
+                    throw new CacheMissException(id, CacheManager.TableNames.VLOG_CACHE.toString());
+                }
                 cache.put(id, result);
                 return result;
             });
         } catch (ExecutionException ex) {
             log.error("Error when loading value from vlog cache");
+        } catch (UncheckedExecutionException ex) {
+            if (ex.getCause() instanceof CacheMissException) {
+                log.debug(ex.getMessage());
+            } else {
+                log.error("Error when loading value from vlog cache");
+            }
         }
 
         return null;
@@ -212,6 +227,8 @@ public class VlogService implements IVlogService {
     @Transactional
     @Override
     public boolean userUndoLikeVlog(String userId, String vlogId, String vloggerId) {
+        log.debug("VlogService.userUndoLikeVlog => user "+ userId + "unlike vlog " + vlogId);
+
         MyLikedVlog likedVlog = new MyLikedVlog();
         likedVlog.setUserId(userId);
         likedVlog.setVlogId(vlogId);
@@ -227,12 +244,15 @@ public class VlogService implements IVlogService {
 
         redis.del(RedisConsts.REDIS_USER_LIKE_VLOG + userId + ":" + vlogId);
 
-        msgService.deleteAllMessages(
-                userId,
-                vloggerId,
-                MessageEnum.LIKE_VLOG.type,
-                Collections.singletonMap("vlogId", vlogId)
-        );
+//        msgService.deleteAllMessages(
+//                userId,
+//                vloggerId,
+//                MessageEnum.LIKE_VLOG.type,
+//                Collections.singletonMap("vlogId", vlogId)
+//        );
+        Message tmpMsg = new Message(userId, vloggerId,
+                MessageEnum.LIKE_VLOG.type, Collections.singletonMap("vlogId", vlogId));
+        ampqProducer.publishMongoMessage(tmpMsg, CrudOperationEnum.DELETE);
 
         return success;
     }

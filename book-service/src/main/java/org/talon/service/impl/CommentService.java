@@ -2,6 +2,7 @@ package org.talon.service.impl;
 
 import com.github.pagehelper.PageHelper;
 import com.google.common.cache.Cache;
+import com.google.common.util.concurrent.UncheckedExecutionException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.n3r.idworker.Sid;
@@ -11,15 +12,19 @@ import org.springframework.stereotype.Service;
 import org.talon.cache.CacheManager;
 import org.talon.datautils.RedisConsts;
 import org.talon.datautils.RedisUtils;
+import org.talon.enums.CrudOperationEnum;
 import org.talon.enums.MessageEnum;
 import org.talon.enums.YesOrNo;
+import org.talon.exception.CacheMissException;
 import org.talon.exception.RedbookException;
 import org.talon.index.IndexComment;
 import org.talon.mapper.CommentMapper;
 import org.talon.mapper.CommentMapperCustom;
 import org.talon.mapper.VlogMapperCustom;
+import org.talon.mongo.Message;
 import org.talon.pojo.Comment;
 import org.talon.pojo.Vlog;
+import org.talon.rabbitmq.RabbitQueueProducer;
 import org.talon.rest.ResponseStatusEnum;
 import org.talon.service.ICommentService;
 import org.talon.service.IMsgService;
@@ -27,11 +32,9 @@ import org.talon.service.IVlogService;
 import org.talon.utils.pagination.MysqlPageUtils;
 import org.talon.utils.pagination.PagedGridResult;
 import org.talon.vo.CommentInfo;
-import tk.mybatis.mapper.entity.Example;
 
 import java.util.*;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.talon.datautils.RedisConsts.*;
 
@@ -51,13 +54,10 @@ public class CommentService implements ICommentService {
     private CommentMapperCustom commentMapperCustom;
 
     @Autowired
-    private VlogMapperCustom vlogMapperCustom;
-
-    @Autowired
     private IVlogService vlogService;
 
     @Autowired
-    private IMsgService msgService;
+    private RabbitQueueProducer amqpProducer;
 
     @Autowired
     private Sid sid;
@@ -106,10 +106,15 @@ public class CommentService implements ICommentService {
             msgContent.put("fatherCommentId", comment.getFatherCommentId());
         }
 
-        msgService.createMsg(comment.getCommentUserId(),
+//        msgService.createMsg(comment.getCommentUserId(),
+//                comment.getVlogerId(),
+//                type,
+//                msgContent);
+        Message tmpMsg = new Message(comment.getCommentUserId(),
                 comment.getVlogerId(),
                 type,
                 msgContent);
+        amqpProducer.publishMongoMessage(tmpMsg, CrudOperationEnum.CREATE);
 
         return newCommentInfo;
     }
@@ -119,11 +124,20 @@ public class CommentService implements ICommentService {
         try {
             return (Comment) cache.get(commentId, () -> {
                 Comment result = commentMapper.selectByPrimaryKey(commentId);
+                if (result == null) {
+                    throw new CacheMissException(commentId, CacheManager.TableNames.COMMENT_CACHE.toString());
+                }
                 cache.put(commentId, result);
                 return result;
             });
         } catch (ExecutionException ex) {
             log.error("Error when loading value from comment cache");
+        } catch (UncheckedExecutionException ex) {
+            if (ex.getCause() instanceof CacheMissException) {
+                log.debug(ex.getMessage());
+            } else {
+                log.error("Error when loading value from comment cache");
+            }
         }
 
         return null;
@@ -143,10 +157,15 @@ public class CommentService implements ICommentService {
         msgContent.put("vlogCover", vlog.getCover());
         msgContent.put("commentId", commentId);
 
-        msgService.createMsg(userId,
+//        msgService.createMsg(userId,
+//                comment.getCommentUserId(),
+//                MessageEnum.LIKE_COMMENT.type,
+//                msgContent);
+        Message tmpMsg = new Message(userId,
                 comment.getCommentUserId(),
                 MessageEnum.LIKE_COMMENT.type,
                 msgContent);
+        amqpProducer.publishMongoMessage(tmpMsg, CrudOperationEnum.CREATE);
     }
 
     @Override
@@ -154,10 +173,14 @@ public class CommentService implements ICommentService {
         redis.decrement(REDIS_COMMENT_LIKED_COUNT + commentId, 1);
         redis.hdel(REDIS_USER_LIKE_COMMENT + commentId, userId);
 
-        msgService.deleteAllMessages(userId,
-                "",
-                MessageEnum.LIKE_COMMENT.type,
+//        msgService.deleteAllMessages(userId,
+//                "",
+//                MessageEnum.LIKE_COMMENT.type,
+//                Collections.singletonMap("commentId", commentId));
+
+        Message tmpMsg = new Message(userId, "", MessageEnum.LIKE_COMMENT.type,
                 Collections.singletonMap("commentId", commentId));
+        amqpProducer.publishMongoMessage(tmpMsg, CrudOperationEnum.DELETE);
     }
 
     @Override
@@ -196,7 +219,10 @@ public class CommentService implements ICommentService {
 
         redis.decrement(RedisConsts.REDIS_VLOG_COMMENT_COUNT + vlogId, 1);
 
-        msgService.deleteAllMessagesByCommentId(commentId);
+//        msgService.deleteAllMessagesByCommentId(commentId);
+        Message tmpMsg = new Message("", "", null,
+                Collections.singletonMap("commentId", commentId));
+        amqpProducer.publishMongoMessage(tmpMsg, CrudOperationEnum.DELETE);
     }
 
 

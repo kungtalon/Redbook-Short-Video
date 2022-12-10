@@ -50,4 +50,11 @@ public class Message {
     @Field("createTime")
     private Date createTime;
 
+    public Message(String fromUserId, String toUserId, Integer type, Map<String, Object> msgContent) {
+        this.fromUserId = fromUserId;
+        this.toUserId = toUserId;
+        this.msgType = type;
+        this.msgContent = msgContent;
+    }
+
 }

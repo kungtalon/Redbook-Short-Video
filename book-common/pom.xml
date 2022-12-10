@@ -103,6 +103,7 @@
             <version>3.1.270</version>
         </dependency>
 
+        <!--   rabbitmq     -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-amqp</artifactId>

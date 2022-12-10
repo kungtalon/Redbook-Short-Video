@@ -5,20 +5,29 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.util.PageObjectUtil;
 import com.google.common.cache.Cache;
+import com.google.common.cache.CacheLoader;
+import com.google.common.util.concurrent.UncheckedExecutionException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.ibatis.cache.CacheException;
 import org.n3r.idworker.Sid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.talon.cache.CacheManager;
 import org.talon.datautils.RedisUtils;
+import org.talon.enums.CrudOperationEnum;
 import org.talon.enums.MessageEnum;
 import org.talon.enums.YesOrNo;
+import org.talon.exception.CacheMissException;
+import org.talon.exception.RedbookException;
 import org.talon.mapper.FansMapper;
 import org.talon.mapper.FansMapperCustom;
+import org.talon.mongo.Message;
 import org.talon.pojo.Fans;
 import org.talon.pojo.Vlog;
+import org.talon.rabbitmq.RabbitQueueProducer;
+import org.talon.rest.ResponseStatusEnum;
 import org.talon.service.IFansService;
 import org.talon.service.IMsgService;
 import org.talon.utils.pagination.MysqlPageUtils;
@@ -49,7 +58,7 @@ public class FansService implements IFansService {
     private FansMapperCustom fansMapperCustom;
 
     @Autowired
-    private IMsgService msgService;
+    private RabbitQueueProducer amqpProducer;
 
     @Autowired
     private Sid sid;
@@ -87,7 +96,9 @@ public class FansService implements IFansService {
         fansMapper.insert(fans);
 
         // system message: follow
-        msgService.createMsg(myUserId, followUserId, MessageEnum.FOLLOW_YOU.type, null);
+//        msgService.createMsg(myUserId, followUserId, MessageEnum.FOLLOW_YOU.type, null);
+        Message tmpMsg = new Message(myUserId, followUserId, MessageEnum.FOLLOW_YOU.type, null);
+        amqpProducer.publishMongoMessage(tmpMsg, CrudOperationEnum.CREATE);
         return true;
     }
 
@@ -115,7 +126,9 @@ public class FansService implements IFansService {
         redis.decrement(REDIS_MY_FANS_COUNT + followUserId, 1);
         redis.del(REDIS_ME_FOLLOWS_VLOGER + myUserId + ":" + followUserId);
 
-        msgService.deleteAllMessages(myUserId, followUserId, MessageEnum.FOLLOW_YOU.type, null);
+//        msgService.deleteAllMessages(myUserId, followUserId, MessageEnum.FOLLOW_YOU.type, null);
+        Message tmpMsg = new Message(myUserId, followUserId, MessageEnum.FOLLOW_YOU.type, null);
+        amqpProducer.publishMongoMessage(tmpMsg, CrudOperationEnum.DELETE);
         return true;
     }
 
@@ -134,10 +147,16 @@ public class FansService implements IFansService {
                     cache.put(key, resultList.get(0));
                     return resultList.get(0);
                 }
-                return null;
+                throw new CacheMissException(key, CacheManager.TableNames.FANS_CACHE.toString());
             });
         } catch (ExecutionException ex) {
             log.error("Error when loading value from fans cache");
+        } catch (UncheckedExecutionException ex) {
+            if (ex.getCause() instanceof CacheMissException) {
+                log.debug(ex.getMessage());
+            } else {
+                log.error("Error when loading value from fans cache");
+            }
         }
 
         return null;

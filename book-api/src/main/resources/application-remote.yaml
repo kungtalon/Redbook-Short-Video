@@ -30,6 +30,18 @@ spring:
     mongodb:
       uri: mongodb://root:root@localhost:27017
       database: imooc_red_book
+  rabbitmq:
+    host: localhost
+    port: 5672
+    virtual-host: imooc_red_book
+    username: test
+    password: test
+  banner:
+    location: classpath:paimon.txt
+#logging:
+#  level:
+#    org.springframework: ERROR
+#    org.talon: DEBUG
 
 minio:
   endpoint: http://127.0.0.1:9000
